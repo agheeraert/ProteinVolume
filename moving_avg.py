@@ -28,10 +28,19 @@ def plot_apo_holo(table, n_trajs, n_frames, output):
         if n_trajs//4 >= 1:
             plt.subplot(2, n_trajs//4, i+1)
         plt.title("Simulation "+str(i+1))
-        plt.plot(table_apo[previous:previous+n_frames], c='b', label="apo")
-        plt.plot(table_holo[previous:previous+n_frames], c='r', label="PRFAR")
+        if i==0:
+            plt.plot(table_apo[previous:previous+n_frames], c='b', label="apo")
+            plt.plot(table_holo[previous:previous+n_frames], c='r', label="PRFAR")
+        else:
+            plt.plot(table_apo[previous:previous+n_frames], c='b')
+            plt.plot(table_holo[previous:previous+n_frames], c='r')
+        plt.ylabel('Range (nm)')
+        plt.xlabel('Time (ns)')
+        plt.xticks(np.arange(0, 1001, 250), np.arange(0, 101, 25))
         previous += n_frames
-    plt.tight_layout()
+    f.legend(loc=8, ncol=2)        
+    f.tight_layout()
+    f.subplots_adjust(bottom=0.15)
     plt.savefig(output)
     plt.close()
 
