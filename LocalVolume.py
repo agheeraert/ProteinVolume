@@ -184,10 +184,10 @@ class LocalVolume():
         self._save_matrix(self.cov_matrix_all, output)
         
     def _save_matrix(self, mat, output, divcmap=False):
-        def _rec(a1, a2):
-            x1 = a1-1.5
-            x2 = a2-0.5
-            plt.plot([x1, x2, x2, x1, x1], [x1, x1, x2, x2, x1], linestyle=':', linewidth=1, color='k')
+        def _rec(a1, a2, H=False, color='k'):
+            x1 = a1-1.5 + 253*int(H)
+            x2 = a2-0.5 + 253 * int(H)
+            plt.plot([x1, x2, x2, x1, x1], [x1, x1, x2, x2, x1], linestyle=':', linewidth=1, color=color)
 
         f = plt.figure()
         if divcmap:
@@ -204,10 +204,20 @@ class LocalVolume():
         _rec(15,29)
         _rec(59, 74)
         _rec(91,95)
-        _rec(9+253, 18+253)
-        _rec(49+253,52+253)
+        _rec(9, 18, H=True)
+        _rec(49,52, H=True)
+        _rec(118, 124, color='b')
+        _rec(224, 234, color='b')
+        _rec(116, 121, color='b', H=True)
         plt.savefig(output, dpi=1000)
-        plt.close()        
+        plt.close()
+
+    def topk_cov_matrix(self, k):
+        N, N = self.cov_matrix_all.shape
+        _indices = np.argsort(self.cov_matrix_all, axis=None)[-1:-2*k:-2]
+        indices = np.stack(np.divmod(_indices, N)).transpose()
+        print(np.vectorize(self.resId2resName.get)(indices))
+
 
 if __name__ == '__main__':
     # a = LocalVolume(['/home/aghee/PDB/prot_apo_sim'+str(i)+'_s10.dcd' for i in range(1,5)]+['/home/aghee/PDB/prot_prfar_sim'+str(i)+'_s10.dcd' for i in range(1,5)], '/home/aghee/PDB/prot.prmtop', 'results/all_run')
@@ -224,7 +234,8 @@ if __name__ == '__main__':
     a = LocalVolume(['/home/aghee/PDB/prot_apo_sim'+str(i)+'_s10.dcd' for i in range(1,5)]+['/home/aghee/PDB/prot_prfar_sim'+str(i)+'_s10.dcd' for i in range(1,5)], '/home/aghee/PDB/prot.prmtop', 'results/everything')
     # a.plot_labels_ext(['results/run_'+str(i)+'labels.p' for i in range(1,5)], ['results/run_'+str(i)+'labels_shared.p' for i in range(1,5)])
     a.covariance_matrix(['results/run_'+str(i)+'labels.p' for i in range(1,5)], ['results/run_'+str(i)+'labels_shared.p' for i in range(1,5)])
-    a.save_cov_matrix('results/covariance_matrix.png')
+    # a.save_cov_matrix('results/covariance_matrix.png')
+    a.topk_cov_matrix(20)
     # a = LocalVolume(['/home/aghee/PDB/prot_apo_sim'+str(i)+'_s10.dcd' for i in range(1,5)]+['/home/aghee/PDB/prot_prfar_sim'+str(i)+'_s10.dcd' for i in range(1,5)], '/home/aghee/PDB/prot.prmtop', 'results/everything')
     # a.load_tet("results/all_runtetrahedrons.p")
     # a.create_contacts_dic()
