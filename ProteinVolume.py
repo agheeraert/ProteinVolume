@@ -8,6 +8,7 @@ from scipy.spatial.distance import pdist, cdist
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib as mpl
 
 class ProteinVolume():
     def __init__(self, trajs, topo, n_frames, output, methods=['delcut'], apo_holo=True, delcutoff=0.55):
@@ -49,16 +50,23 @@ class ProteinVolume():
     #     plt.plot()
     
     def plot_apo_holo(self, volumes):
+        plt.style.use('classic')
+        fig = plt.figure()
+        mpl.rcParams.update({'axes.formatter.useoffset': False})
+        fig.patch.set_facecolor('white')
         volumes_apo = volumes[self.n_trajs//2:]
         volumes_holo = volumes[:self.n_trajs//2]
         for i in range(len(volumes_apo)):
             if self.n_trajs//4 >= 1:
                 plt.subplot(2, self.n_trajs//4, i+1)
             plt.title("Simulation "+str(i+1))
-            plt.ylabel("Volume (nm$^3$)")
+            plt.ylabel("Range (nm)")
             plt.xlabel("Time (ns)")
             plt.plot(np.arange(0, 100, 0.1), volumes_apo[i], c='b', label="apo")
             plt.plot(np.arange(0, 100, 0.1), volumes_holo[i], c='r', label="PRFAR")
+            plt.xlim(0,100)
+        plt.legend(loc='upper right')
+        plt.tight_layout()
 
     def volume_over_sims(self):
         self.n_trajs = len(self.n_frames)
@@ -81,8 +89,29 @@ class ProteinVolume():
             plt.legend()
             plt.savefig(jn(self.output, 'volumes_'+method+'.svg'))
             plt.close()
+
+    def dependance_cut(self):
+        volumes = []
+        for cutpar in tqdm(np.arange(0.1, 1.01, 0.01)):
+            self.delcutoff = cutpar
+            volumes.append(self.volume_Delaunay_cut(0))
+        plt.style.use('classic')
+        fig = plt.figure()
+        mpl.rcParams.update({'axes.formatter.useoffset': False})
+        fig.patch.set_facecolor('white')
+        plt.plot(np.arange(1, 10.1, 0.1), volumes)
+        plt.xlabel('Cutoff distance parameter')
+        plt.ylabel('Volume computed')
+        plt.xlim(0,10)
+        plt.show()
               
 
 if __name__ == '__main__':
     # ProteinVolume(['/home/aghee/PDB/prot_apo_sim'+str(i)+'_s10.dcd' for i in range(1,5)]+['/home/aghee/PDB/prot_prfar_sim'+str(i)+'_s10.dcd' for i in range(1,5)], '/home/aghee/PDB/prot.prmtop', [1000], '/home/aghee/ProteinVolume/results/').volume_over_sims()
-    ProteinVolume(['/home/aghee/PDB/prot_apo_sim'+str(i)+'_s10.dcd' for i in range(1,5)]+['/home/aghee/PDB/prot_prfar_sim'+str(i)+'_s10.dcd' for i in range(1,5)], '/home/aghee/PDB/prot.prmtop', [1000], '/home/aghee/ProteinVolume/results/').volume_over_sims()
+    test = ProteinVolume(['/home/aghee/PDB/prot_apo_sim'+str(i)+'_s10.dcd' for i in range(1,5)]+['/home/aghee/PDB/prot_prfar_sim'+str(i)+'_s10.dcd' for i in range(1,5)], '/home/aghee/PDB/prot.prmtop', [1000], '/home/aghee/ProteinVolume/results/')
+    # volumes = pkl.load(open('results/volumes_delcut_smoothed100.p', 'rb'))
+    # volumes = np.load('/home/aghee/Rapports/ProteinVolume/cont.npy')
+    # test.n_trajs = 8
+    # test.plot_apo_holo(np.array(volumes).reshape(-1, 1000))
+    # plt.show()
+    test.dependance_cut()
