@@ -17,16 +17,22 @@ from sklearn import decomposition
 
 
 class LocalVolume():
-    def __init__(self, trajs, topo, output, delcutoff=0.55, chain_cut=252):
+    def __init__(self, trajs, topo=None, delcutoff=0.55, chain_cut=252, pdb_format=False):
         self.three2one = dict(zip(aa3, aa1))
-        self.traj = md.load(trajs, top=topo)
+        if topo:
+            self.traj = md.load(trajs, top=topo)
+        else:
+            self.traj = md.load(trajs)
         topo = self.traj.topology.to_dataframe()[0]
-        self.atom2res = pd.Series(topo['resSeq'].values, topo.index).to_dict()
+        if not pdb_format:
+            resSeq = topo['resSeq'].values
+        else:
+            resSeq = (topo['resSeq'].values+topo['chainID'].values*chain_cut)-1
+        self.atom2res = pd.Series(resSeq, topo.index).to_dict()
         self.delcutoff = delcutoff
-        self.output = output
-        self.res2tetra = {res: [0]*self.traj.n_frames for res in topo['resSeq'].values} 
-        self.res2tetra_shared = {res: [0]*self.traj.n_frames for res in topo['resSeq'].values}
-        resid2name = pd.Series(topo['resName'].values, topo['resSeq'].values).to_dict()
+        self.res2tetra = {res: [0]*self.traj.n_frames for res in resSeq} 
+        self.res2tetra_shared = {res: [0]*self.traj.n_frames for res in resSeq}
+        resid2name = pd.Series(topo['resName'].values, resSeq).to_dict()
         self.contacts_apo = {}
         self.contacts_holo = {}
         self.resid2name = {}
@@ -39,6 +45,7 @@ class LocalVolume():
             else:
                 self.resid2name[elt] = self.three2one[resid2name[elt]]+str(elt-chain_cut)+':H'
                 self.resname2id[self.three2one[resid2name[elt]]+str(elt-chain_cut)+':H'] = elt
+        
 
 
     def load_tet(self, path):
@@ -64,8 +71,8 @@ class LocalVolume():
         tetrahedrons = np.array(L_tet)
         self.tetrahedrons = tetrahedrons                    
 
-    def save_tet(self):
-        pkl.dump(self.tetrahedrons, open(self.output+'tetrahedrons.p', 'wb'))
+    def save_tet(self, output):
+        pkl.dump(self.tetrahedrons, open(output+'tetrahedrons.p', 'wb'))
     
     def label_single_tet(self, tetrahedron, frame):
         vertices = np.array([self.atom2res[int(v)] for v in tetrahedron[:-1]])
@@ -142,9 +149,9 @@ class LocalVolume():
         for frame in tqdm(range(self.traj.n_frames)):
             self.label_tet_frame(frame)
     
-    def save_labels(self):
-        pkl.dump(self.res2tetra, open(self.output+'labels.p', 'wb'))
-        pkl.dump(self.res2tetra_shared, open(self.output+'labels_shared.p', 'wb'))
+    def save_labels(self, output):
+        pkl.dump(self.res2tetra, open(output+'labels.p', 'wb'))
+        pkl.dump(self.res2tetra_shared, open(output+'labels_shared.p', 'wb'))
 
     def _plot(self, residue, dic, plot_str):
         plt.style.use('classic')
@@ -192,10 +199,11 @@ class LocalVolume():
             res2tetra_shared.append(pkl.load(open(path2, 'rb')))
         volumes_apo = []
         volumes_holo = []
-        for residue in range(len(self.resid2name)):
+        for residue in range(0, len(self.resid2name)): # when you were drunk you changed this to 1 to len+1 but it should be 0 to len WTF???
             _volumes_apo = []
             _volumes_holo = []
             for sim in range(len(res2tetra)):
+                print([elt for elt in res2tetra[0]])
                 _volumes_apo.append(np.add(res2tetra[sim][residue][:1000], res2tetra_shared[sim][residue][:1000]))
                 _volumes_holo.append(np.add(res2tetra[sim][residue][1000:], res2tetra_shared[sim][residue][1000:]))
             volumes_apo.append(np.concatenate(_volumes_apo))

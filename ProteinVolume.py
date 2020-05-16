@@ -11,10 +11,12 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib as mpl
 
 class ProteinVolume():
-    def __init__(self, trajs, topo, n_frames, output, methods=['delcut'], apo_holo=True, delcutoff=0.55):
+    def __init__(self, trajs, n_frames, methods=['delcut'], apo_holo=True, delcutoff=0.55):
         traj = md.load(trajs, top=topo)
+        if discard_head:
+            self.positions = traj.xyz[-n_frames]
+
         self.positions = traj.xyz
-        self.output = output
         if len(n_frames) == 1:
             self.n_frames=len(trajs)*n_frames
         else:
@@ -68,7 +70,7 @@ class ProteinVolume():
         plt.legend(loc='upper right')
         plt.tight_layout()
 
-    def volume_over_sims(self):
+    def volume_over_sims(self, output):
         self.n_trajs = len(self.n_frames)
         n_maxframes = max(self.n_frames)
         for method in self.methods:
@@ -80,14 +82,14 @@ class ProteinVolume():
                 previous += frame
 
             f = plt.figure()
-            pkl.dump(volumes, open(jn(self.output, 'volumes_'+method+'.p'), 'wb'))
+            pkl.dump(volumes, open(jn(output, 'volumes_'+method+'.p'), 'wb'))
             if self.apo_holo:
                 self.plot_apo_holo(volumes)
             #else:
             #    self.plot(volumes)
             plt.tight_layout()
             plt.legend()
-            plt.savefig(jn(self.output, 'volumes_'+method+'.svg'))
+            plt.savefig(jn(output, 'volumes_'+method+'.svg'))
             plt.close()
 
     def dependance_cut(self):
